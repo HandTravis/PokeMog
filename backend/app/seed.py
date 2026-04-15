@@ -96,9 +96,14 @@ async def fetch_evolution_stage(client: httpx.AsyncClient, species_data: dict) -
 # ---------------------------------------------------------------------------
 # Core seeding logic
 # ---------------------------------------------------------------------------
-async def seed_pokemon(session: AsyncSession, client: httpx.AsyncClient, pokemon_id: int):
+async def seed_pokemon(client: httpx.AsyncClient, pokemon_id: int):
     """Fetch a single Pokémon from PokéAPI and upsert into the DB."""
-
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            await _seed_pokemon_inner(session, client, pokemon_id)
+ 
+ 
+async def _seed_pokemon_inner(session: AsyncSession, client: httpx.AsyncClient, pokemon_id: int):
     # Skip if already seeded
     result = await session.execute(
         text("SELECT id FROM pokemon WHERE id = :id"), {"id": pokemon_id}
@@ -106,7 +111,7 @@ async def seed_pokemon(session: AsyncSession, client: httpx.AsyncClient, pokemon
     if result.fetchone():
         log.debug(f"Pokémon #{pokemon_id} already exists, skipping.")
         return
-
+ 
     # Fetch base data
     try:
         poke_data = await fetch_json(client, f"{POKEAPI_BASE}/pokemon/{pokemon_id}")
@@ -114,23 +119,23 @@ async def seed_pokemon(session: AsyncSession, client: httpx.AsyncClient, pokemon
     except httpx.HTTPStatusError as e:
         log.warning(f"Skipping #{pokemon_id}: {e}")
         return
-
+ 
     name = poke_data["name"]
     display_name = name.replace("-", " ").title()
     generation = get_generation(pokemon_id)
     is_legendary = species_data.get("is_legendary", False)
     is_mythical = species_data.get("is_mythical", False)
     evolution_stage = await fetch_evolution_stage(client, species_data)
-
+ 
     sprites = poke_data.get("sprites", {})
     sprite_url = sprites.get("front_default")
     sprite_shiny_url = sprites.get("front_shiny")
-
+ 
     types = [
         {"slot": t["slot"], "type": t["type"]["name"]}
         for t in poke_data.get("types", [])
     ]
-
+ 
     # Insert pokemon row
     await session.execute(
         text("""
@@ -154,7 +159,7 @@ async def seed_pokemon(session: AsyncSession, client: httpx.AsyncClient, pokemon
             "sprite_shiny_url": sprite_shiny_url,
         },
     )
-
+ 
     # Insert types
     for t in types:
         await session.execute(
@@ -165,27 +170,24 @@ async def seed_pokemon(session: AsyncSession, client: httpx.AsyncClient, pokemon
             """),
             {"pokemon_id": pokemon_id, "type": t["type"], "slot": t["slot"]},
         )
-
+ 
     log.info(f"Seeded #{pokemon_id} {display_name} (gen {generation}, stage {evolution_stage})")
-
 
 async def run_seed():
     max_id = GENERATION_RANGES[GENERATION_LIMIT][1]
     ids_to_seed = list(range(1, max_id + 1))
-
+ 
     log.info(f"Seeding generations 1–{GENERATION_LIMIT} ({len(ids_to_seed)} Pokémon)...")
-
+ 
     async with httpx.AsyncClient() as client:
-        async with AsyncSessionLocal() as session:
-            # Process in batches to avoid hammering PokéAPI
-            batch_size = 20
-            for i in range(0, len(ids_to_seed), batch_size):
-                batch = ids_to_seed[i : i + batch_size]
-                tasks = [seed_pokemon(session, client, pid) for pid in batch]
-                await asyncio.gather(*tasks)
-                await session.commit()
-                log.info(f"Committed batch {i // batch_size + 1} / {-(-len(ids_to_seed) // batch_size)}")
-
+        # Each seed_pokemon opens its own session — safe to gather concurrently
+        batch_size = 20
+        for i in range(0, len(ids_to_seed), batch_size):
+            batch = ids_to_seed[i : i + batch_size]
+            tasks = [seed_pokemon(client, pid) for pid in batch]
+            await asyncio.gather(*tasks)
+            log.info(f"Committed batch {i // batch_size + 1} / {-(-len(ids_to_seed) // batch_size)}")
+ 
     log.info("Seeding complete.")
 
 
