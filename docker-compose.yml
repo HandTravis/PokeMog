@@ -1,0 +1,87 @@
+services:
+
+  # -----------------------------------------------------------
+  # PostgreSQL
+  # -----------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: pokeranker-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pokeranker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pokeranker}
+      POSTGRES_DB: ${POSTGRES_DB:-pokeranker}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro  # auto-runs on first start
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pokeranker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------------------------------------
+  # FastAPI backend
+  # -----------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pokeranker-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pokeranker}:${POSTGRES_PASSWORD:-pokeranker}@db:5432/${POSTGRES_DB:-pokeranker}
+      POKEAPI_BASE_URL: https://pokeapi.co/api/v2
+      SEED_ON_STARTUP: ${SEED_ON_STARTUP:-false}  # set true on first run
+    volumes:
+      - ./backend:/app          # hot-reload in dev
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # -----------------------------------------------------------
+  # React frontend (Vite dev server)
+  # -----------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pokeranker-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:8000
+    volumes:
+      - ./frontend:/app         # hot-reload in dev
+      - /app/node_modules       # keep node_modules inside container
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    command: npm run dev -- --host
+
+  # -----------------------------------------------------------
+  # (Optional) Seed runner — one-shot container to populate DB
+  # Run manually: docker compose run --rm seeder
+  # -----------------------------------------------------------
+  seeder:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pokeranker-seeder
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pokeranker}:${POSTGRES_PASSWORD:-pokeranker}@db:5432/${POSTGRES_DB:-pokeranker}
+      POKEAPI_BASE_URL: https://pokeapi.co/api/v2
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python -m app.seed
+    profiles:
+      - seed   # won't start with `docker compose up`; run explicitly
+
+volumes:
+  postgres_data:
