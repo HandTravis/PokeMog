@@ -35,6 +35,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-pokeranker}:${POSTGRES_PASSWORD:-pokeranker}@db:5432/${POSTGRES_DB:-pokeranker}
       POKEAPI_BASE_URL: https://pokeapi.co/api/v2
       SEED_ON_STARTUP: ${SEED_ON_STARTUP:-false}  # set true on first run
+      SQL_ECHO: ${SQL_ECHO:-false}
     volumes:
       - ./backend:/app          # hot-reload in dev
     ports:
