@@ -1,3 +1,5 @@
 httpx
 asyncpg
 sqlalchemy[asyncio]
+fastapi
+uvicorn[standard]
