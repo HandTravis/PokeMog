@@ -130,6 +130,9 @@ async def create_session(
 
     # Kick off round 1
     await _create_round(db, session.id, round_number=1)
+    await db.commit()
+    await db.refresh(session)
+    
 
     return session, pool_size
 
@@ -286,6 +289,10 @@ async def _check_tiebreaker(
     )
     matchups = result.scalars().all()
 
+    # No matchups yet means round just started — no tiebreaker needed
+    if not matchups:
+        return None
+
     winner_ids = [m.winner_id for m in matchups]
     loser_ids = [
         m.pokemon_b_id if m.winner_id == m.pokemon_a_id else m.pokemon_a_id
@@ -377,17 +384,19 @@ async def _advance_round(
             sp.status = PokemonStatus.winner
         session.status = SessionStatus.completed
         session.completed_at = datetime.now(timezone.utc)
+        await db.commit()
         return True
 
     # Start next round — shuffle remaining for randomness
     remaining_ids = [sp.pokemon_id for sp in remaining]
     random.shuffle(remaining_ids)
 
-    next_round = await _create_round(
+    await _create_round(
         db, session.id, round_number=current_round.round_number + 1
     )
 
     # Pre-pair the next round's matchups lazily (done in get_next_matchup)
+    db.commit()
     return False
 
 
@@ -419,6 +428,8 @@ async def submit_pick(
 
     matchup.winner_id = winner_id
     matchup.decided_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(matchup)
 
     return matchup
 
