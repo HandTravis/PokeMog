@@ -288,7 +288,7 @@ async def _check_tiebreaker(
         select(Matchup).where(Matchup.round_id == current_round.id)
     )
     matchups = result.scalars().all()
-
+    
     # No matchups yet means round just started — no tiebreaker needed
     if not matchups:
         return None
