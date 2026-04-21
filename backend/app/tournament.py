@@ -438,6 +438,8 @@ async def submit_pick(
     Raises ValueError on invalid input.
     """
     from datetime import datetime, timezone
+    from sqlalchemy import select, and_
+    from app.models import SessionPokemon, PokemonStatus
 
     matchup = await db.get(Matchup, matchup_id)
 
