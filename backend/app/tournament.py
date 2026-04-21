@@ -130,7 +130,7 @@ async def create_session(
 
     # Kick off round 1
     await _create_round(db, session.id, round_number=1)
-    await _generate_round_matchups(db, session.id, round_number=1)
+    await _generate_round_matchups(db, session.id, round_id=1)
     await db.commit()
     await db.refresh(session)
     
@@ -194,7 +194,7 @@ async def get_active_pokemon(
 async def _generate_round_matchups(
     db: AsyncSession,
     session_id: UUID,
-    round_: Round,
+    round_id: Round,
 ) -> None:
     """Pair all active Pokémon into matchups for the given round."""
     active = await get_active_pokemon(db, session_id)
@@ -204,7 +204,7 @@ async def _generate_round_matchups(
     # Pair them up — any leftover bye is handled later in _check_tiebreaker
     for i in range(0, len(pokemon_ids) - 1, 2):
         db.add(Matchup(
-            round_id=round_.id,
+            round_id=round_id,
             session_id=session_id,
             pokemon_a_id=pokemon_ids[i],
             pokemon_b_id=pokemon_ids[i + 1],
@@ -414,7 +414,7 @@ async def _advance_round(
     remaining_ids = [sp.pokemon_id for sp in remaining]
     random.shuffle(remaining_ids)
     next_round = current_round.round_number + 1
-    
+
     await _create_round(
         db, session.id, round_number=next_round
     )
@@ -452,6 +452,43 @@ async def submit_pick(
 
     matchup.winner_id = winner_id
     matchup.decided_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(matchup)
+
+
+    # Eliminate the loser immediately
+    loser_id = matchup.pokemon_b_id if winner_id == matchup.pokemon_a_id else matchup.pokemon_a_id
+    loser_sp = await db.execute(
+        select(SessionPokemon).where(
+            and_(
+                SessionPokemon.session_id == session_id,
+                SessionPokemon.pokemon_id == loser_id,
+            )
+        )
+    )
+    loser_sp = loser_sp.scalar_one_or_none()
+    if loser_sp:
+        loser_sp.status = PokemonStatus.eliminated
+
+    # Check if we've hit target_remaining after this elimination
+    session = await db.get(Session, session_id)
+    remaining = await db.execute(
+        select(SessionPokemon).where(
+            and_(
+                SessionPokemon.session_id == session_id,
+                SessionPokemon.status == PokemonStatus.active,
+            )
+        )
+    )
+    remaining = remaining.scalars().all()
+
+    if len(remaining) <= session.target_remaining:
+        # Mark all remaining as winners and close the session
+        for sp in remaining:
+            sp.status = PokemonStatus.winner
+        session.status = SessionStatus.completed
+        session.completed_at = datetime.now(timezone.utc)
+
     await db.commit()
     await db.refresh(matchup)
 
