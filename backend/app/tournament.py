@@ -288,7 +288,7 @@ async def _check_tiebreaker(
         select(Matchup).where(Matchup.round_id == current_round.id)
     )
     matchups = result.scalars().all()
-    
+
     # No matchups yet means round just started — no tiebreaker needed
     if not matchups:
         return None
@@ -396,7 +396,7 @@ async def _advance_round(
     )
 
     # Pre-pair the next round's matchups lazily (done in get_next_matchup)
-    db.commit()
+    await db.commit()
     return False
 
 
