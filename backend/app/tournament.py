@@ -130,6 +130,7 @@ async def create_session(
 
     # Kick off round 1
     await _create_round(db, session.id, round_number=1)
+    await _generate_round_matchups(db, session.id, round_number=1)
     await db.commit()
     await db.refresh(session)
     
@@ -190,6 +191,28 @@ async def get_active_pokemon(
 # ---------------------------------------------------------------------------
 # Matchup generation
 # ---------------------------------------------------------------------------
+async def _generate_round_matchups(
+    db: AsyncSession,
+    session_id: UUID,
+    round_: Round,
+) -> None:
+    """Pair all active Pokémon into matchups for the given round."""
+    active = await get_active_pokemon(db, session_id)
+    pokemon_ids = [sp.pokemon_id for sp in active]
+    random.shuffle(pokemon_ids)
+
+    # Pair them up — any leftover bye is handled later in _check_tiebreaker
+    for i in range(0, len(pokemon_ids) - 1, 2):
+        db.add(Matchup(
+            round_id=round_.id,
+            session_id=session_id,
+            pokemon_a_id=pokemon_ids[i],
+            pokemon_b_id=pokemon_ids[i + 1],
+        ))
+
+    await db.commit()
+
+
 async def get_next_matchup(
     db: AsyncSession,
     session_id: UUID,
@@ -390,11 +413,12 @@ async def _advance_round(
     # Start next round — shuffle remaining for randomness
     remaining_ids = [sp.pokemon_id for sp in remaining]
     random.shuffle(remaining_ids)
-
+    next_round = current_round.round_number + 1
+    
     await _create_round(
-        db, session.id, round_number=current_round.round_number + 1
+        db, session.id, round_number=next_round
     )
-
+    await _generate_round_matchups(db, session.id, next_round)
     # Pre-pair the next round's matchups lazily (done in get_next_matchup)
     await db.commit()
     return False
