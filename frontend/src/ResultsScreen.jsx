@@ -200,8 +200,9 @@ export default function ResultsScreen({ sessionId, onRestart }) {
 
       {/* Winners grid */}
       <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
         gap: "1rem",
         marginBottom: "2rem",
       }}>
