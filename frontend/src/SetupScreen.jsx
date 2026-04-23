@@ -109,7 +109,7 @@ export default function SetupScreen({ onSessionStart }) {
           fontWeight: 800,
           marginBottom: "0.4rem",
         }}>
-          Pokémon Ranker
+          A Pokémon Ranking Game
         </div>
         <h1 style={{
           fontFamily: "var(--font-display)",
@@ -118,7 +118,7 @@ export default function SetupScreen({ onSessionStart }) {
           margin: 0,
           lineHeight: 1.1,
         }}>
-          Who's Your<br />Favourite?
+          Poké<br />MOGGED!
         </h1>
         <p style={{
           color: "var(--text-muted)",
@@ -126,7 +126,7 @@ export default function SetupScreen({ onSessionStart }) {
           fontSize: "0.9rem",
           marginTop: "0.8rem",
         }}>
-          Pick your filters, then decide head-to-head until your favourites rise to the top.
+          Pick your filters, then decide head-to-head until your favourites MOG to the top.
         </p>
       </div>
 

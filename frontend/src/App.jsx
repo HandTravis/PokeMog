@@ -118,7 +118,7 @@ export default function App() {
             lineHeight: 1.4,
           }}
         >
-          Pokémon<br />Ranker
+          Pokémog
         </div>
 
         {screen === SCREENS.MATCHUP && sessionId && (

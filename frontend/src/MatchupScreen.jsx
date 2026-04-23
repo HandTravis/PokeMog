@@ -19,8 +19,8 @@ function ProgressBar({ active, pool }) {
         letterSpacing: "0.08em",
         textTransform: "uppercase",
       }}>
-        <span>{active} remaining</span>
-        <span>{pct}% eliminated</span>
+        <span>{active} remaining...</span>
+        <span>{pct}% MOGGED</span>
       </div>
       <div style={{
         height: "8px",
