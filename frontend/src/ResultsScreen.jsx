@@ -60,6 +60,8 @@ function WinnerCard({ pokemon, rank }) {
       animationDelay: `${rank * 0.07}s`,
       opacity: 0,
       boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+      width: "200px",
+      flexShrink: 0,
     }}>
       <style>{`
         @keyframes riseIn {
