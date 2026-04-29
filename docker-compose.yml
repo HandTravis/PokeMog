@@ -65,6 +65,24 @@ services:
       - backend
     command: npm run dev -- --host
 
+# -----------------------------------------------------------
+  # Test runner — runs pytest against the backend
+  # Run manually: docker compose --profile test run --rm tester
+  # -----------------------------------------------------------
+  tester:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pokeranker-tester
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pokeranker}:${POSTGRES_PASSWORD:-pokeranker}@db:5432/${POSTGRES_DB:-pokeranker}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: pytest
+    profiles:
+      - test
+
   # -----------------------------------------------------------
   # (Optional) Seed runner — one-shot container to populate DB
   # Run manually: docker compose run --rm seeder
