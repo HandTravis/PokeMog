@@ -3,3 +3,7 @@ asyncpg
 sqlalchemy[asyncio]
 fastapi
 uvicorn[standard]
+pytest
+pytest-asyncio
+httpx
+aiosqlite
