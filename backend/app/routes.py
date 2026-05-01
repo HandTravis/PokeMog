@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, Field, ConfigDict
 
 from app.database import get_db
 from app.models import (
@@ -49,8 +50,7 @@ class PokemonOut(BaseModel):
     sprite_shiny_url: str | None
     types: list[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MatchupOut(BaseModel):
@@ -60,8 +60,7 @@ class MatchupOut(BaseModel):
     pokemon_b: PokemonOut
     winner_id: int | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SessionOut(BaseModel):
@@ -72,16 +71,14 @@ class SessionOut(BaseModel):
     active_count: int
     pool_size: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CreateSessionRequest(BaseModel):
     target_remaining: int = Field(..., gt=0, description="How many Pokémon survivors you want")
     filters: dict[str, list[str]] = Field(default_factory=dict)
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(from_attributes=True, json_schema_extra = {
             "example": {
                 "target_remaining": 3,
                 "filters": {
@@ -91,7 +88,7 @@ class CreateSessionRequest(BaseModel):
                     "is_legendary": ["false"],
                 }
             }
-        }
+        })
 
 
 class CreateSessionResponse(BaseModel):
