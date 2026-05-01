@@ -61,8 +61,8 @@ class TestBuildPool:
             "type": ["fire"],
             "evolution_stage": ["1"],
         })
-        # only charmander
-        assert len(pool) == 1
+        # charmander + moltres
+        assert len(pool) == 2
 
     async def test_empty_pool(self, seeded_db):
         pool = await build_pool(seeded_db, {"generation": ["9"]})
@@ -270,7 +270,6 @@ class TestSessionCompletion:
 # ---------------------------------------------------------------------------
 class TestRoundAdvancement:
     async def test_new_round_created_after_round_completes(self, seeded_db):
-        """After all matchups in round 1 are decided, round 2 should be created."""
         session, _ = await create_session(seeded_db, {}, target_remaining=1)
         round_1 = await get_current_round(seeded_db, session.id)
         assert round_1.round_number == 1
@@ -282,6 +281,9 @@ class TestRoundAdvancement:
         matchups = result.scalars().all()
         for m in matchups:
             await submit_pick(seeded_db, session.id, m.id, m.pokemon_a_id)
+
+        # Trigger round advancement by requesting the next matchup
+        await get_next_matchup(seeded_db, session.id)
 
         await seeded_db.refresh(session)
         if session.status == SessionStatus.active:
