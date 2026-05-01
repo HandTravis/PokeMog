@@ -282,13 +282,24 @@ class TestRoundAdvancement:
         for m in matchups:
             await submit_pick(seeded_db, session.id, m.id, m.pokemon_a_id)
 
-        # Trigger round advancement by requesting the next matchup
+        # Trigger round advancement
         await get_next_matchup(seeded_db, session.id)
+
+        # Verify a second round was created in the DB
+        result = await seeded_db.execute(
+            select(Round).where(
+                Round.session_id == session.id,
+                Round.round_number == 2,
+            )
+        )
+        round_2 = result.scalar_one_or_none()
 
         await seeded_db.refresh(session)
         if session.status == SessionStatus.active:
-            round_2 = await get_current_round(seeded_db, session.id)
-            assert round_2.round_number == 2
+            assert round_2 is not None
+        else:
+            # Session completed in one round — valid for small pools
+            pytest.skip("Session completed before round 2 was needed")
 
     async def test_active_count_decreases_each_round(self, seeded_db):
         session, _ = await create_session(seeded_db, {}, target_remaining=1)
