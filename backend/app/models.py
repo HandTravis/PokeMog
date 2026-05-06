@@ -105,7 +105,7 @@ class PokemonType(Base):
     __tablename__ = "pokemon_types"
 
     pokemon_id = Column(Integer, ForeignKey("pokemon.id", ondelete="CASCADE"), primary_key=True)
-    type       = Column(Enum(PokemonTypeEnum, name="pokemon_type_enum"), nullable=False, native_enum=False)
+    type       = Column(Enum(PokemonTypeEnum, name="pokemon_type_enum", native_enum=False), nullable=False)
     slot       = Column(SmallInteger, primary_key=True)
 
     __table_args__ = (
@@ -130,10 +130,10 @@ class Session(Base):
     completed_at      = Column(DateTime(timezone=True))
     target_remaining  = Column(SmallInteger, nullable=False, default=8)
     status            = Column(
-                            Enum(SessionStatus, name="session_status_enum"),
+                            Enum(SessionStatus, name="session_status_enum",
+                            native_enum=False),
                             nullable=False,
-                            default=SessionStatus.active,
-                            native_enum=False
+                            default=SessionStatus.active
                         )
 
     # Relationships
