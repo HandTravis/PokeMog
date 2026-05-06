@@ -269,40 +269,6 @@ class TestSessionCompletion:
 # Round advancement
 # ---------------------------------------------------------------------------
 class TestRoundAdvancement:
-    # async def test_new_round_created_after_round_completes(self, seeded_db):
-    #     session, _ = await create_session(seeded_db, {}, target_remaining=1)
-    #     round_1 = await get_current_round(seeded_db, session.id)
-    #     assert round_1.round_number == 1
-
-    #     # Decide all round 1 matchups including any tiebreaker
-    #     for _ in range(20):  # safety limit
-    #         result = await seeded_db.execute(
-    #             select(Matchup).where(
-    #                 Matchup.round_id == round_1.id,
-    #                 Matchup.winner_id.is_(None),
-    #             )
-    #         )
-    #         undecided = result.scalars().all()
-    #         if not undecided:
-    #             break
-    #         for m in undecided:
-    #             await submit_pick(seeded_db, session.id, m.id, m.pokemon_a_id)
-
-    #     # Trigger round advancement
-    #     await get_next_matchup(seeded_db, session.id)
-
-    #     await seeded_db.refresh(session)
-    #     if session.status == SessionStatus.active:
-    #         result = await seeded_db.execute(
-    #             select(Round).where(
-    #                 Round.session_id == session.id,
-    #                 Round.round_number == 2,
-    #             )
-    #         )
-    #         round_2 = result.scalar_one_or_none()
-    #         assert round_2 is not None
-    #     else:
-    #         pass
     async def test_new_round_created_after_round_completes(self, seeded_db):
         """Use a pool of 4 with target 1 — guarantees round 2 is needed."""
         session, _ = await create_session(
