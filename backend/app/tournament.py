@@ -129,8 +129,8 @@ async def create_session(
         ))
 
     # Kick off round 1
-    await _create_round(db, session.id, round_number=1)
-    await _generate_round_matchups(db, session.id, round_id=1)
+    round_ = await _create_round(db, session.id, round_number=1)
+    await _generate_round_matchups(db, session.id, round_=round_)
     await db.commit()
     await db.refresh(session)
     
@@ -194,17 +194,23 @@ async def get_active_pokemon(
 async def _generate_round_matchups(
     db: AsyncSession,
     session_id: UUID,
-    round_id: Round,
+    round_: Round,
 ) -> None:
     """Pair all active Pokémon into matchups for the given round."""
+    # Guard: don't generate matchups if they already exist for this round
+    existing = await db.execute(
+        select(Matchup).where(Matchup.round_id == round_.id).limit(1)
+    )
+    if existing.scalar_one_or_none():
+        return
+
     active = await get_active_pokemon(db, session_id)
     pokemon_ids = [sp.pokemon_id for sp in active]
     random.shuffle(pokemon_ids)
 
-    # Pair them up — any leftover bye is handled later in _check_tiebreaker
     for i in range(0, len(pokemon_ids) - 1, 2):
         db.add(Matchup(
-            round_id=round_id,
+            round_id=round_.id,
             session_id=session_id,
             pokemon_a_id=pokemon_ids[i],
             pokemon_b_id=pokemon_ids[i + 1],
@@ -413,12 +419,12 @@ async def _advance_round(
     # Start next round — shuffle remaining for randomness
     remaining_ids = [sp.pokemon_id for sp in remaining]
     random.shuffle(remaining_ids)
-    next_round = current_round.round_number + 1
+    next_round_number = current_round.round_number + 1
 
-    await _create_round(
-        db, session.id, round_number=next_round
+    next_round_ = await _create_round(
+        db, session.id, round_number=next_round_number
     )
-    await _generate_round_matchups(db, session.id, next_round)
+    await _generate_round_matchups(db, session.id, next_round_)
     # Pre-pair the next round's matchups lazily (done in get_next_matchup)
     await db.commit()
     return False
