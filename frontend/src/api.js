@@ -1,7 +1,7 @@
 // api.js — All backend calls in one place.
 // Base URL is injected from Vite env, falls back to localhost for dev.
 
-const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE = import.meta.env.VITE_API_URL ?? "";
 
 async function request(method, path, body) {
   const res = await fetch(`${BASE}/api${path}`, {
