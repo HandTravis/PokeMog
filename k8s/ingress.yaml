@@ -4,22 +4,20 @@ metadata:
   name: pokeranker-ingress
   namespace: pokeranker
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
   ingressClassName: nginx
   rules:
     - host: pokeranker.local
       http:
         paths:
-          # API routes go to the backend
-          - path: /api
-            pathType: Prefix
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: backend-service
                 port:
                   number: 8000
-          # Health check route
           - path: /health
             pathType: Prefix
             backend:
@@ -27,7 +25,6 @@ spec:
                 name: backend-service
                 port:
                   number: 8000
-          # Everything else goes to the frontend
           - path: /
             pathType: Prefix
             backend:
