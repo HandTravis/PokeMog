@@ -15,10 +15,12 @@ spec:
       labels:
         app: backend
     spec:
+      imagePullSecrets:
+        - name: registry-pokeranker-registry
       containers:
         - name: backend
-          image: pokeranker-backend:latest
-          imagePullPolicy: Never   # use local image built by Docker Desktop
+          image: registry.digitalocean.com/pokeranker-registry/pokeranker-backend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
