@@ -8,3 +8,4 @@ pytest-asyncio
 anyio
 httpx
 aiosqlite
+alembic
