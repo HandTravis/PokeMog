@@ -4,11 +4,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app.models import Base
 from app.routes import router
+from sqlalchemy import text
+from alembic.config import Config
+from alembic import command
+import os
+
+def run_migrations():
+    """Run Alembic migrations on startup."""
+    alembic_cfg = Config("/app/migrations/alembic.ini")
+    alembic_cfg.set_main_option("script_location", "/app/migrations")
+    command.upgrade(alembic_cfg, "head")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    run_migrations()
     yield
 
 app = FastAPI(title="PokéRanker API", lifespan=lifespan)
