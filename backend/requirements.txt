@@ -9,3 +9,4 @@ anyio
 httpx
 aiosqlite
 alembic
+psycopg2-binary
