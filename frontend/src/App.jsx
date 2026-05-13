@@ -1,11 +1,16 @@
 // App.jsx — Root component, global styles, and screen routing.
 
 import { useState } from "react";
+import { clearToken, isAuthenticated } from "./api";
+import { LoginScreen, RegisterScreen } from "./AuthScreens";
 import SetupScreen from "./SetupScreen";
 import MatchupScreen from "./MatchupScreen";
 import ResultsScreen from "./ResultsScreen";
+import SessionHistoryScreen from "./SessionHistoryScreen";
 
-// Global styles injected once at the root
+// ---------------------------------------------------------------------------
+// Global styles
+// ---------------------------------------------------------------------------
 const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@400;600;700;800&display=swap');
 
@@ -62,18 +67,48 @@ const GLOBAL_STYLES = `
   }
 `;
 
+// ---------------------------------------------------------------------------
 // Screen states
+// ---------------------------------------------------------------------------
 const SCREENS = {
-  SETUP: "setup",
-  MATCHUP: "matchup",
-  RESULTS: "results",
+  LOGIN:    "login",
+  REGISTER: "register",
+  SETUP:    "setup",
+  MATCHUP:  "matchup",
+  RESULTS:  "results",
+  HISTORY:  "history",
 };
 
 export default function App() {
-  const [screen, setScreen] = useState(SCREENS.SETUP);
+  const [screen, setScreen] = useState(SCREENS.LOGIN);
+  const [user, setUser] = useState(null);       // { email } or null for guests
   const [sessionId, setSessionId] = useState(null);
   const [poolSize, setPoolSize] = useState(0);
 
+  // ---------------------------------------------------------------------------
+  // Auth handlers
+  // ---------------------------------------------------------------------------
+  function handleAuthSuccess(userData) {
+    setUser(userData);
+    setScreen(SCREENS.HISTORY);
+  }
+
+  function handleGuest() {
+    setUser(null);
+    setScreen(SCREENS.SETUP);
+  }
+
+  function handleLogout() {
+    clearToken();
+    setUser(null);
+    setSessionId(null);
+    setPoolSize(0);
+    setScreen(SCREENS.LOGIN);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Session handlers
+  // ---------------------------------------------------------------------------
   function handleSessionStart(id, size) {
     setSessionId(id);
     setPoolSize(size);
@@ -88,14 +123,21 @@ export default function App() {
   function handleRestart() {
     setSessionId(null);
     setPoolSize(0);
-    setScreen(SCREENS.SETUP);
+    // Authenticated users go to history, guests go to setup
+    setScreen(user ? SCREENS.HISTORY : SCREENS.SETUP);
   }
 
-  return (
-    <>
-      <style>{GLOBAL_STYLES}</style>
+  function handleResume(id, size) {
+    setSessionId(id);
+    setPoolSize(size);
+    setScreen(SCREENS.MATCHUP);
+  }
 
-      {/* Top nav bar */}
+  // ---------------------------------------------------------------------------
+  // Nav bar
+  // ---------------------------------------------------------------------------
+  function NavBar() {
+    return (
       <div style={{
         borderBottom: "2px solid var(--border)",
         background: "var(--card-bg)",
@@ -107,8 +149,9 @@ export default function App() {
         top: 0,
         zIndex: 100,
       }}>
+        {/* Logo */}
         <div
-          onClick={handleRestart}
+          onClick={() => setScreen(user ? SCREENS.HISTORY : SCREENS.SETUP)}
           style={{
             fontFamily: "var(--font-display)",
             fontSize: "0.6rem",
@@ -118,34 +161,120 @@ export default function App() {
             lineHeight: 1.4,
           }}
         >
-          Pokémog
+          Pokémon<br />Ranker
         </div>
 
-        {screen === SCREENS.MATCHUP && sessionId && (
-          <button
-            onClick={handleRestart}
-            style={{
-              background: "none",
-              border: "2px solid var(--border)",
-              borderRadius: "8px",
-              padding: "4px 12px",
-              fontFamily: "var(--font-body)",
-              fontSize: "0.75rem",
-              color: "var(--text-muted)",
-              cursor: "pointer",
-              fontWeight: 700,
-            }}
-          >
-            ✕ Quit
-          </button>
-        )}
-      </div>
+        {/* Right side */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          {/* Quit button during matchup */}
+          {screen === SCREENS.MATCHUP && (
+            <button
+              onClick={handleRestart}
+              style={{
+                background: "none",
+                border: "2px solid var(--border)",
+                borderRadius: "8px",
+                padding: "4px 12px",
+                fontFamily: "var(--font-body)",
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                cursor: "pointer",
+                fontWeight: 700,
+              }}
+            >
+              ✕ Quit
+            </button>
+          )}
 
-      {/* Screen content */}
+          {/* User info + logout */}
+          {user ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <span style={{
+                fontFamily: "var(--font-body)",
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+              }}>
+                {user.email}
+              </span>
+              <button
+                onClick={handleLogout}
+                style={{
+                  background: "none",
+                  border: "2px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "4px 12px",
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                }}
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
+            // Guest — show login link unless already on auth screens
+            ![SCREENS.LOGIN, SCREENS.REGISTER].includes(screen) && (
+              <button
+                onClick={() => setScreen(SCREENS.LOGIN)}
+                style={{
+                  background: "none",
+                  border: "2px solid var(--red)",
+                  borderRadius: "8px",
+                  padding: "4px 12px",
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.75rem",
+                  color: "var(--red)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                }}
+              >
+                Log in
+              </button>
+            )
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+  return (
+    <>
+      <style>{GLOBAL_STYLES}</style>
+      <NavBar />
+
       <main style={{ minHeight: "calc(100vh - 52px)" }}>
+        {screen === SCREENS.LOGIN && (
+          <LoginScreen
+            onSuccess={handleAuthSuccess}
+            onSwitchToRegister={() => setScreen(SCREENS.REGISTER)}
+            onContinueAsGuest={handleGuest}
+          />
+        )}
+
+        {screen === SCREENS.REGISTER && (
+          <RegisterScreen
+            onSuccess={handleAuthSuccess}
+            onSwitchToLogin={() => setScreen(SCREENS.LOGIN)}
+            onContinueAsGuest={handleGuest}
+          />
+        )}
+
+        {screen === SCREENS.HISTORY && (
+          <SessionHistoryScreen
+            onResume={handleResume}
+            onStartNew={() => setScreen(SCREENS.SETUP)}
+          />
+        )}
+
         {screen === SCREENS.SETUP && (
           <SetupScreen onSessionStart={handleSessionStart} />
         )}
+
         {screen === SCREENS.MATCHUP && sessionId && (
           <MatchupScreen
             sessionId={sessionId}
@@ -153,6 +282,7 @@ export default function App() {
             onComplete={handleComplete}
           />
         )}
+
         {screen === SCREENS.RESULTS && sessionId && (
           <ResultsScreen
             sessionId={sessionId}
