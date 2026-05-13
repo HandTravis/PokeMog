@@ -68,9 +68,12 @@ function SessionCard({ session, onResume }) {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const date = new Date(session.created_at).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-  });
+  const rawDate = session.created_at ? new Date(session.created_at) : null;
+  const date = rawDate && !isNaN(rawDate)
+  ? rawDate.toLocaleDateString("en-US", {
+      month: "short", day: "numeric", year: "numeric",
+    })
+  : "Unknown date";
 
   async function handleExpand() {
     if (expanded) { setExpanded(false); return; }
