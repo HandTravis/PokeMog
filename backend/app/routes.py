@@ -200,13 +200,14 @@ async def get_pokemon(pokemon_id: int, db: AsyncSession = Depends(get_db)):
 async def start_session(
     body: CreateSessionRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user),
 ):
-    """Create a new ranking session with filters and a target survivor count."""
     try:
         session, pool_size = await create_session(
             db=db,
             filters=body.filters,
             target_remaining=body.target_remaining,
+            user_id=current_user.id if current_user else None,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
