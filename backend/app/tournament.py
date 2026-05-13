@@ -85,6 +85,7 @@ async def create_session(
     db: AsyncSession,
     filters: dict[str, list[str]],
     target_remaining: int,
+    user_id=None,
 ) -> tuple[Session, int]:
     """
     Create a new session with the given filters and target_remaining.
@@ -107,7 +108,10 @@ async def create_session(
     random.shuffle(pool_ids)
 
     # Create session
-    session = Session(target_remaining=target_remaining)
+    session = Session(
+        target_remaining=target_remaining, 
+        user_id=user_id
+    )
     db.add(session)
     await db.flush()  # get session.id without committing
 
