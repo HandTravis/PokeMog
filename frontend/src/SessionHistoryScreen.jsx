@@ -285,7 +285,7 @@ export default function SessionHistoryScreen({ onResume, onStartNew }) {
           fontFamily: "var(--font-body)",
           fontSize: "0.85rem",
         }}>
-          {error}
+          {typeof error === "string" ? error : "Failed to load sessions."}
         </div>
       )}
 
