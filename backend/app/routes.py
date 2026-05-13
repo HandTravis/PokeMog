@@ -251,6 +251,7 @@ async def session_history(
             current_round=current_round.round_number if current_round else None,
             active_count=len(active),
             pool_size=pool_size,
+            created_at=session.created_at,
         ))
     return out
 
