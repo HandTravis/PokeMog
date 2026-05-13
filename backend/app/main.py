@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app.models import Base
 from app.routes import router
+from app.auth_routes import router as auth_router
 from sqlalchemy import text
 from alembic.config import Config
 from alembic import command
@@ -30,6 +31,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
 
 @app.get("/health")
 async def health():
