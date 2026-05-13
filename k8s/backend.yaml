@@ -21,6 +21,7 @@ spec:
         - name: backend
           image: registry.digitalocean.com/pokeranker-registry/pokeranker-backend:latest
           imagePullPolicy: Always
+          command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
           ports:
             - containerPort: 8000
           env:
@@ -31,6 +32,11 @@ spec:
                   key: DATABASE_URL
             - name: PYTHONPATH
               value: "/app"
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pokeranker-secrets
+                  key: SECRET_KEY
           readinessProbe:
             httpGet:
               path: /health
