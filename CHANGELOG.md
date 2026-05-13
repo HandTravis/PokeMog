@@ -205,3 +205,56 @@ All notable changes to this project are documented here, ordered chronologically
 - DB empty on first deploy: ran seeder as `kubectl run` one-off pod
 - Double matchup generation in k8s caused by `_generate_round_matchups` being called twice — fixed with existence guard
 - Wrong `round_id=1` keyword argument in `create_session` and `_advance_round` calls to `_generate_round_matchups` — corrected to pass `Round` object
+
+# PokéRanker Changelog
+
+All notable changes to this project are documented here, ordered chronologically by development phase.
+
+---
+
+## Phase 14 — DigitalOcean Cloud Deployment
+
+### Added
+- DigitalOcean account setup with $200 free credits
+- `doctl` CLI installed and authenticated via API token
+- DigitalOcean Container Registry (`pokeranker-registry`) created at basic tier then upgraded to basic for multiple repositories
+- 2-node Kubernetes cluster created in `nyc1` region with `s-2vcpu-4gb` nodes
+- Images rebuilt for `linux/amd64` platform using `docker buildx` to fix ARM64/x86 architecture mismatch on Apple Silicon
+- Images pushed to registry: `registry.digitalocean.com/pokeranker-registry/pokeranker-backend:latest` and `pokeranker-frontend:latest`
+- Registry pull secret created manually in `pokeranker` namespace with correct `username: do` credentials
+- `imagePullSecrets` added to `spec.template.spec` in both `backend.yaml` and `frontend.yaml`
+- `imagePullPolicy` changed from `Never` to `Always` in both manifests
+- Full registry image paths added to both manifests replacing local image names
+- `PGDATA` env var set to `/var/lib/postgresql/data/pgdata` in `postgres.yaml` to fix DigitalOcean block storage mount point conflict
+- Nginx ingress controller deployed to DO cluster
+- Ingress `host:` rule removed to allow IP-based access without a custom domain
+- Seeder run as one-off `kubectl run` pod with `imagePullSecrets` override against DO cluster DB
+- App confirmed fully functional at `http://146.190.1.160`
+
+### Fixed
+- `ErrImageNeverPull` — changed `imagePullPolicy` from `Never` to `Always`
+- `ErrImagePull` from Docker Hub — added full registry path to image names
+- Registry secret in wrong namespace — used `sed` to replace `kube-system` with `pokeranker` in `doctl registry kubernetes-manifest` output
+- `imagePullSecrets` in wrong location — moved from Deployment `spec` to `spec.template.spec`
+- Platform mismatch (`no match for platform in manifest`) — rebuilt images with `--platform linux/amd64` using `docker buildx`
+- Postgres init failure (`directory exists but is not empty`) — added `PGDATA` env var pointing to subdirectory
+- 404 on raw IP access — removed `host: pokeranker.local` from ingress rule
+- Empty database on first deploy — ran seeder as `kubectl run` one-off pod
+
+---
+
+## Phase 15 — Alembic Migrations (`backend/migrations/`)
+
+### Added
+- Alembic initialized inside the backend container via `alembic init migrations`
+- `migrations/env.py` updated to import `Base.metadata` from `app.models` for autogenerate support
+- `DATABASE_URL` read from environment in `env.py`, replacing hardcoded connection string in `alembic.ini`
+- `postgresql://` replaced with `postgresql+psycopg2://` for Alembic's sync driver
+- `psycopg2-binary` added to `requirements.txt` as Alembic's sync dependency
+- Initial migration generated via `alembic revision --autogenerate -m "initial schema"` capturing full current schema
+- `main.py` updated to run `alembic upgrade head` on startup via `run_migrations()`, replacing `Base.metadata.create_all`
+- `alembic check` confirmed schema is fully tracked and up to date
+
+### Decisions Made
+- Alembic set up before user auth so the users table addition can be handled as a proper versioned migration
+- Sync `psycopg2` driver used for Alembic while keeping `asyncpg` for the FastAPI async runtime
