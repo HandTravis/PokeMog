@@ -126,6 +126,7 @@ class Session(Base):
     __tablename__ = "sessions"
 
     id                = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id           = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at        = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     completed_at      = Column(DateTime(timezone=True))
     target_remaining  = Column(SmallInteger, nullable=False, default=8)
@@ -141,6 +142,7 @@ class Session(Base):
     pokemon_entries   = relationship("SessionPokemon", back_populates="session", cascade="all, delete-orphan")
     rounds            = relationship("Round", back_populates="session", cascade="all, delete-orphan", order_by="Round.round_number")
     matchups          = relationship("Matchup", back_populates="session", cascade="all, delete-orphan")
+    user              = relationship("User", back_populates="sessions")
 
     def __repr__(self):
         return f"<Session id={self.id} status={self.status}>"
@@ -238,3 +240,21 @@ class Matchup(Base):
 
     def __repr__(self):
         return f"<Matchup id={self.id} a={self.pokemon_a_id} b={self.pokemon_b_id} winner={self.winner_id}>"
+
+
+# ---------------------------------------------------------------------------
+# User
+# ---------------------------------------------------------------------------
+class User(Base):
+    __tablename__ = "users"
+
+    id            = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email         = Column(String(255), nullable=False, unique=True)
+    hashed_password = Column(String(255), nullable=False)
+    created_at    = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    sessions      = relationship("Session", back_populates="user")
+
+    def __repr__(self):
+        return f"<User id={self.id} email={self.email}>"
