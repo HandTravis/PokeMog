@@ -10,7 +10,9 @@ httpx
 aiosqlite
 alembic
 psycopg2-binary
-python-jose[cryptography]
-passlib[bcrypt]
+# python-jose[cryptography]
+PyJWT
+passlib
+# bcrypt==4.0.1
 python-multipart
 email-validator
