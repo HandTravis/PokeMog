@@ -23,6 +23,7 @@ from app.models import (
     Session,
     SessionPokemon,
     SessionStatus,
+    SessionFilter,
 )
 from app.tournament import (
     create_session,
@@ -75,6 +76,7 @@ class SessionOut(BaseModel):
     active_count: int
     pool_size: int
     created_at: datetime | None = None
+    filters: dict[str, list[str]] = {}
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -244,6 +246,17 @@ async def session_history(
             select(SessionPokemon).where(SessionPokemon.session_id == session.id)
         )
         pool_size = len(pool_result.scalars().all())
+        
+        filter_result = await db.execute(
+            select(SessionFilter).where(SessionFilter.session_id == session.id)
+        )
+        filter_rows = filter_result.scalars().all()
+
+        # Group filter values by key
+        filters = {}
+        for f in filter_rows:
+            filters.setdefault(f.filter_key, []).append(f.filter_value)
+        
         out.append(SessionOut(
             id=session.id,
             status=session.status.value,
@@ -252,6 +265,7 @@ async def session_history(
             active_count=len(active),
             pool_size=pool_size,
             created_at=session.created_at,
+            filters=filters,
         ))
     return out
 

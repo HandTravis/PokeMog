@@ -60,7 +60,7 @@ function RoundBadge({ round }) {
   );
 }
 
-function PokemonCard({ pokemon, onClick, disabled, winner, loser }) {
+function PokemonCard({ pokemon, onClick, disabled, winner, loser, shiny }) {
   const [hovered, setHovered] = useState(false);
 
   const borderColor = winner
@@ -130,7 +130,9 @@ function PokemonCard({ pokemon, onClick, disabled, winner, loser }) {
       }}>
         {pokemon.sprite_url ? (
           <img
-            src={pokemon.sprite_url}
+            src={shiny && pokemon.sprite_shiny_url 
+              ? pokemon.sprite_shiny_url 
+              : pokemon.sprite_url}
             alt={pokemon.display_name}
             style={{
               width: "100%",
@@ -207,6 +209,7 @@ export default function MatchupScreen({ sessionId, poolSize, onComplete }) {
   const [picking, setPicking] = useState(false);
   const [decided, setDecided] = useState(null); // { winnerId, loserId }
   const [error, setError] = useState(null);
+  const [shiny, setShiny] = useState(false);
 
   const fetchSession = useCallback(async () => {
     const s = await getSession(sessionId);
@@ -304,7 +307,29 @@ export default function MatchupScreen({ sessionId, poolSize, onComplete }) {
         marginBottom: "1rem",
         letterSpacing: "0.1em",
       }}>
-        Who do you prefer?
+        Which 'mon mogs the other?
+      </div>
+
+      {/* Shiny toggle */}
+      <div style={{ textAlign: "center", marginBottom: "0.8rem" }}>
+        <button
+          onClick={() => setShiny(s => !s)}
+          style={{
+            background: shiny ? "#F8D030" : "var(--card-bg)",
+            border: `2px solid ${shiny ? "#F8D030" : "var(--border)"}`,
+            borderRadius: "20px",
+            padding: "4px 14px",
+            fontFamily: "var(--font-body)",
+            fontSize: "0.72rem",
+            fontWeight: 700,
+            cursor: "pointer",
+            color: shiny ? "#333" : "var(--text-muted)",
+            letterSpacing: "0.08em",
+            transition: "all 0.15s ease",
+          }}
+        >
+          ✨ Shiny
+        </button>
       </div>
 
       {/* Battle area */}
@@ -316,6 +341,7 @@ export default function MatchupScreen({ sessionId, poolSize, onComplete }) {
             disabled={picking || !!decided}
             winner={decided?.winnerId === matchup.pokemon_a.id}
             loser={decided?.loserId === matchup.pokemon_a.id}
+            shiny={shiny}
           />
 
           {/* VS divider */}
@@ -343,6 +369,7 @@ export default function MatchupScreen({ sessionId, poolSize, onComplete }) {
             disabled={picking || !!decided}
             winner={decided?.winnerId === matchup.pokemon_b.id}
             loser={decided?.loserId === matchup.pokemon_b.id}
+            shiny={shiny}
           />
         </div>
       )}

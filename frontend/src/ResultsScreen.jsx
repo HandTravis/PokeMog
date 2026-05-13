@@ -44,7 +44,7 @@ function Confetti() {
   );
 }
 
-function WinnerCard({ pokemon, rank }) {
+function WinnerCard({ pokemon, rank, shiny }) {
   return (
     <div style={{
       background: "var(--card-bg)",
@@ -87,7 +87,9 @@ function WinnerCard({ pokemon, rank }) {
       <div style={{ width: 88, height: 88 }}>
         {pokemon.sprite_url ? (
           <img
-            src={pokemon.sprite_url}
+            src={shiny && pokemon.sprite_shiny_url
+              ? pokemon.sprite_shiny_url
+              : pokemon.sprite_url}
             alt={pokemon.display_name}
             style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }}
           />
@@ -133,6 +135,7 @@ export default function ResultsScreen({ sessionId, onRestart }) {
   const [winners, setWinners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [shiny, setShiny] = useState(false);
 
   useEffect(() => {
     async function fetch() {
@@ -199,6 +202,27 @@ export default function ResultsScreen({ sessionId, onRestart }) {
           {winners.length} Pokémon survived your rankings.
         </p>
       </div>
+      
+      <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+        <button
+          onClick={() => setShiny(s => !s)}
+          style={{
+            background: shiny ? "#F8D030" : "var(--card-bg)",
+            border: `2px solid ${shiny ? "#F8D030" : "var(--border)"}`,
+            borderRadius: "20px",
+            padding: "4px 14px",
+            fontFamily: "var(--font-body)",
+            fontSize: "0.72rem",
+            fontWeight: 700,
+            cursor: "pointer",
+            color: shiny ? "#333" : "var(--text-muted)",
+            letterSpacing: "0.08em",
+            transition: "all 0.15s ease",
+          }}
+        >
+          ✨ Shiny
+        </button>
+      </div>
 
       {/* Winners grid */}
       <div style={{
@@ -209,7 +233,7 @@ export default function ResultsScreen({ sessionId, onRestart }) {
         marginBottom: "2rem",
       }}>
         {winners.map((p, i) => (
-          <WinnerCard key={p.id} pokemon={p} rank={i} />
+          <WinnerCard key={p.id} pokemon={p} rank={i} shiny={shiny} />
         ))}
       </div>
 

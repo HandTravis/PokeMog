@@ -128,8 +128,41 @@ function SessionCard({ session, onResume }) {
             color: "var(--text)",
             fontWeight: 600,
           }}>
-            {session.pool_size} Pokémon · Top {session.target_remaining} goal
+            {session.pool_size} Pokémon · Top {session.target_remaining}
           </div>
+          
+          {/* Filter tags */}
+          {Object.keys(session.filters ?? {}).length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "0.4rem" }}>
+              {Object.entries(session.filters).map(([key, values]) =>
+                values.map((val) => (
+                  <span
+                    key={`${key}-${val}`}
+                    style={{
+                      background: "var(--bg)",
+                      border: "1.5px solid var(--border)",
+                      borderRadius: "20px",
+                      padding: "2px 8px",
+                      fontSize: "0.65rem",
+                      fontWeight: 700,
+                      color: "var(--text-muted)",
+                      fontFamily: "var(--font-body)",
+                      letterSpacing: "0.06em",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {key === "generation" ? `Gen ${val}` :
+                    key === "evolution_stage" ? `Stage ${val}` :
+                    key === "is_legendary" && val === "true" ? "Legendary" :
+                    key === "is_legendary" && val === "false" ? "No Legendaries" :
+                    key === "is_mythical" && val === "true" ? "Mythical" :
+                    key === "is_mythical" && val === "false" ? "No Mythicals" :
+                    val}
+                  </span>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
