@@ -36,6 +36,8 @@ services:
       POKEAPI_BASE_URL: https://pokeapi.co/api/v2
       SEED_ON_STARTUP: ${SEED_ON_STARTUP:-false}  # set true on first run
       SQL_ECHO: ${SQL_ECHO:-false}
+      SECRET_KEY: ${SECRET_KEY:-changeme-dev-secret}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
     volumes:
       - ./backend:/app          # hot-reload in dev
     ports:
