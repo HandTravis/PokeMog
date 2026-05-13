@@ -74,6 +74,7 @@ class SessionOut(BaseModel):
     current_round: int | None
     active_count: int
     pool_size: int
+    created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
