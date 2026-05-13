@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
 
 from app.database import get_db
 from app.models import (
@@ -31,6 +32,9 @@ from app.tournament import (
     get_results,
     submit_pick,
 )
+
+from app.auth import get_current_user, get_optional_user
+from app.models import User
 
 router = APIRouter()
 
@@ -319,3 +323,35 @@ async def abandon_session(session_id: UUID, db: AsyncSession = Depends(get_db)):
         )
     session.status = SessionStatus.abandoned
     session.completed_at = datetime.now(timezone.utc)
+
+
+@router.get("/sessions/history", response_model=list[SessionOut])
+async def session_history(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all sessions for the currently authenticated user."""
+    result = await db.execute(
+        select(Session)
+        .where(Session.user_id == current_user.id)
+        .order_by(Session.created_at.desc())
+    )
+    sessions = result.scalars().all()
+
+    out = []
+    for session in sessions:
+        current_round = await get_current_round(db, session.id)
+        active = await get_active_pokemon(db, session.id)
+        pool_result = await db.execute(
+            select(SessionPokemon).where(SessionPokemon.session_id == session.id)
+        )
+        pool_size = len(pool_result.scalars().all())
+        out.append(SessionOut(
+            id=session.id,
+            status=session.status.value,
+            target_remaining=session.target_remaining,
+            current_round=current_round.round_number if current_round else None,
+            active_count=len(active),
+            pool_size=pool_size,
+        ))
+    return out
